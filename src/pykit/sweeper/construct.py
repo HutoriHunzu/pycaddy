@@ -1,6 +1,6 @@
 from typing import NamedTuple, Any, Iterable
 from pydantic import TypeAdapter
-from .utils import split_dict_by_adapter, flatten, merge_by_update
+from ..dict_utils import split_dict_by_adapter, flatten, merge_by_update
 
 DefaultAdapter = list | tuple
 IterableAdapter = TypeAdapter(DefaultAdapter)

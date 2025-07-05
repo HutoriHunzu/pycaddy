@@ -1,6 +1,6 @@
 from pydantic import BaseModel, TypeAdapter
-from typing_extensions import Iterable, Iterator
-from .utils import merge_by_update, unflatten
+from typing_extensions import Iterable
+from ..dict_utils import unflatten, merge_by_update
 from .construct import construct_split_data
 from .strategies import StrategyName, STRATEGIES
 from .base import SweepAbstract

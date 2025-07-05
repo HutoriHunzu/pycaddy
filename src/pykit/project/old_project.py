@@ -11,26 +11,19 @@ log runs through a shared :class:`~workflow.ledger.Ledger`.
 """
 
 from __future__ import annotations
+
+from pydantic import BaseModel, Field, PrivateAttr
 from pathlib import Path
-from typing import Annotated
-from pydantic import BaseModel, Field, PrivateAttr, BeforeValidator
 
-from .ledger import Ledger, Status
+# from .run_location import RunLocation
+from .session import Session
 
+from ..ledger import Ledger, Status, RunRecord
+from ..dict_utils import hash_dict
 
-def ensure_path(v: Path | str) -> Path:
-    if isinstance(v, str):
-        return Path(v)
-    return v
+from .structs import StorageMode, ExistingRun
 
-
-def ensure_str_from_path(v: Path | str) -> str:
-    if isinstance(v, str):
-        return v
-    return v.as_posix()
-
-
-PathLike = Annotated[Path | str, BeforeValidator(ensure_path)]
+from .utils import PathLike, AbsolutePathLike
 
 
 # ─────────────────────────────── class ────────────────────────────── #
@@ -38,6 +31,10 @@ class Project(BaseModel):
     # serializable fields -------------------------------------------------
     root: PathLike = Field(..., description="Project root directory")
     relpath: PathLike = Field(default_factory=Path, description="Sub-folder prefix")
+    # storage_mode: StorageMode
+
+    if_exists: ExistingRun = ExistingRun.RESUME,
+    storage: StorageMode = StorageMode.SUBFOLDER
 
     # private, non-serialised state --------------------------------------
     _ledger: Ledger | None = PrivateAttr(default=None)
@@ -53,29 +50,83 @@ class Project(BaseModel):
         return self._ledger
 
     @property
-    def root_data(self):
-        return self.ledger.data
+    def data(self) -> dict[str, dict[str, RunRecord]]:
+        data = self.ledger.data  # the raw data is string based
+        return {k: {b: RunRecord(**t) for b, t in v.items()} for k, v in data.items()}
+
+    def clean(self):
+        self.ledger.clean_non_finished()
 
     @property
     def path(self) -> Path:
         """Filesystem directory represented by *this* Project object."""
         return self.root / self.relpath
 
+    @property
+    def absolute_path(self) -> Path:
+        return self.path.resolve()
+
     # make folder creation optional but available ------------------------
     def ensure_folder(self) -> None:
         """Create ``self.path`` (and parents) if missing."""
         self.path.mkdir(parents=True, exist_ok=True)
 
+    def session(self,
+                identifier: str,
+                *,
+                params: dict | None = None,
+                if_exists: ExistingRun = None,
+                storage: StorageMode = None
+                ) -> Session | None:  # may return None when SKIP
+
+        # if resume try to find the current run record
+        if_exists = if_exists if if_exists is not None else self.if_exists
+        storage = storage if storage is not None else self.storage
+
+        # check params and compute hash
+        param_hash = None
+        if params:
+            param_hash = hash_dict(params)
+
+        # if strategy is RESUME try to find it by hash
+        uid, record = None, None
+        if params and if_exists.RESUME:
+            hit = self.ledger.find_by_param_hash(identifier=identifier, param_hash=param_hash)
+            if hit:
+                uid, record = hit
+
+        # in case uid is still None it means that either we couldn't find it or
+        # the strategy is to create NEW record
+        elif uid or if_exists.NEW:
+            uid, record = self.ledger.allocate(identifier=identifier, relpath=self.relpath,
+                                               param_hash=param_hash)
+
+        else:
+            raise ValueError(f'Given unknown strategy {if_exists}')
+
+        assert (uid is not None)
+        assert (record is not None)
+
+        return Session(
+            ledger=self.ledger,
+            identifier=identifier,
+            uid=uid,
+            record=record,
+            folder=self.absolute_path,
+            param_hash=param_hash,
+        )
+
     # -------------------------------------------------------------------- #
     # grouping (clone with longer relpath)
     # -------------------------------------------------------------------- #
-    def group(self, name: str) -> Project:
+    def sub(self, name: str) -> Project:
         """
         Return a **new** Project scoped to ``<relpath>/<name>`` and sharing
         the same ledger.
         """
-        child = Project(root=self.root, relpath=self.relpath / name)
-        child._ledger = self.ledger
+        child = self.model_copy()
+        child.relpath = self.relpath / name
+        # child = Project(root=self.root, relpath=self.relpath / name)
         child.ensure_folder()
         return child
 

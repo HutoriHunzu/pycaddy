@@ -1,7 +1,7 @@
 from .base import SweepAbstract
 from itertools import product
 from typing import Iterable
-from .utils import merge_dicts
+from ..dict_utils import merge_dicts
 
 
 class ChainSweep(SweepAbstract[dict]):

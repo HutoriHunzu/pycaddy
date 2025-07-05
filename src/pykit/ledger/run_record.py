@@ -1,0 +1,17 @@
+from .status import Status
+from datetime import datetime
+from pydantic import BaseModel
+from pathlib import Path
+
+
+class RunRecord(BaseModel):
+    status: Status
+    relpath: Path | str = '.'
+    param_hash: int | None = None
+    files: dict[str, str] = {}
+    timestamp_status_lst: list[tuple[datetime, Status]] = []
+
+    def timestamp_status(self):
+        """Append (now, current status) to the history list."""
+        self.timestamp_status_lst.append((datetime.now(), self.status))
+
