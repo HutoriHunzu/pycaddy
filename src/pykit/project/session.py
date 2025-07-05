@@ -42,7 +42,8 @@ class Session:
         path.mkdir(parents=True, exist_ok=True)
         return path
 
-    def path(self, name: str = None, include_identifier: bool = True):
+    def path(self, name: str = None,
+             include_identifier: bool = True):
         file_name_list = []
         if self.storage_mode == StorageMode.PREFIX:
             file_name_list.append(self.uid)

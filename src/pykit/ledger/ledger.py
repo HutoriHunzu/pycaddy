@@ -139,9 +139,9 @@ class Ledger(metaclass=PerPathSingleton):
         Retrieve all run records for a given identifier.
         """
         data = self._load()
-        if identifier not in data:
-            raise KeyError(f"No runs found for identifier '{identifier}'")
-        return data[identifier]
+        return data.get(identifier, {})
+        # if identifier not in data:
+        #     raise KeyError(f"No runs found for identifier '{identifier}'")
 
     def find_by_param_hash(self, identifier: str, param_hash: int | None = None) -> tuple[str, RunRecord] | None:
         """

@@ -79,16 +79,18 @@ class Project(BaseModel):
                 ) -> Session | None:  # may return None when SKIP
 
         # if resume try to find the current run record
-        existing_run_strategy = existing_run_strategy if existing_run_strategy else self.existing_run_strategy
-        storage_mode = storage_mode if storage_mode is not None else self.storage_mode
+        existing_run_strategy = existing_run_strategy or self.existing_run_strategy
+        storage_mode = storage_mode or self.storage_mode
 
         # check params and compute hash
         param_hash = None
         if params:
             param_hash = hash_dict(params)
 
-        # if strategy is RESUME try to find it by hash
+        # starting with None uid
         uid = None
+
+        # if strategy is RESUME try to find it by hash
         if params and existing_run_strategy == ExistingRun.RESUME:
             hit = self.ledger.find_by_param_hash(identifier=identifier, param_hash=param_hash)
             if hit:
@@ -96,16 +98,12 @@ class Project(BaseModel):
 
         # in case uid is still None it means that either we couldn't find it or
         # the strategy is to create NEW record
-        elif uid or existing_run_strategy == ExistingRun.NEW:
+        if not uid or existing_run_strategy == ExistingRun.NEW:
             uid = self.ledger.allocate(identifier=identifier,
                                                relpath=self.relpath,
                                                param_hash=param_hash)
 
-        else:
-            raise ValueError(f'Given unknown strategy {existing_run_strategy}')
-
         assert (uid is not None)
-        # assert (record is not None)
 
         return Session(
             ledger=self.ledger,
