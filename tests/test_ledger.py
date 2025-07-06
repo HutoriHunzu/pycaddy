@@ -34,7 +34,7 @@ def test_log_can_attach_files(ledger, tmp_path):
     metrics = tmp_path / "metrics.json"
     metrics.write_text("{}")
 
-    ledger.log("A", uid, path_dict={"metrics": str(metrics)})
+    ledger.log("A", uid, path_dict={"metrics": metrics})
 
     record = ledger.get_record("A", uid)
     assert "metrics" in str(record.files)

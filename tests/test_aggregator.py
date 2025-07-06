@@ -6,8 +6,6 @@ import pytest
 from pydantic import BaseModel, TypeAdapter
 
 from pykit.aggregator import Aggregator  # adjust import to your package layout
-from pykit.ledger import Ledger
-from pykit.dict_utils import flatten
 from pykit.save import save_json
 
 
@@ -42,11 +40,10 @@ def test_aggregate_basic(project, tmp_path: Path):
     grouping_config = {'grp': list(id_to_payloads.keys())}
 
     agg = Aggregator(
-        name_to_identifier_lst=grouping_config,
-        ledger_file_path=project.ledger_path,
+        name_to_identifier_dict=grouping_config
     )
 
-    out = agg.aggregate(file_tag=file_tag)
+    out = agg.aggregate(file_tag=file_tag, ledger=project.ledger)
 
     assert list(out) == ["grp"]
     rows = out["grp"]
@@ -88,12 +85,11 @@ def test_aggregate_with_adapter(project, tmp_path: Path):
             session.attach_files({file_tag: p})
 
     agg = Aggregator(
-        name_to_identifier_lst={"vec": list(id_to_payloads.keys())},
-        ledger_file_path=project.ledger_path,
+        name_to_identifier_dict={"vec": list(id_to_payloads.keys())},
     )
 
     adapter = TypeAdapter(Point)
-    out = agg.aggregate(file_tag=file_tag, adapter=adapter)
+    out = agg.aggregate(file_tag=file_tag, adapter=adapter, ledger=project.ledger)
 
     assert out['vec'] == expected
 
@@ -109,21 +105,10 @@ def test_missing_file_raises(project, tmp_path: Path):
     session.attach_files({file_tag: missing})
 
     agg = Aggregator(
-        name_to_identifier_lst={"g": ["I1"]},
-        ledger_file_path=project.ledger_path,
+        name_to_identifier_dict={"g": ["I1"]},
     )
 
     with pytest.raises(FileNotFoundError):
-        _ = agg.aggregate(file_tag=file_tag)
+        _ = agg.aggregate(file_tag=file_tag, ledger=project.ledger)
 
 
-# ----------------------------------------------------------------------
-# 4) guard against unsupported 'by'
-# # ----------------------------------------------------------------------
-# def test_unsupported_by_value(tmp_ledger: Ledger):
-#     agg = Aggregator(
-#         name_to_identifier_lst={"g": []},
-#         ledger_file_path=tmp_ledger.file,
-#     )
-#     with pytest.raises(ValueError):
-#         _ = agg.aggregate(file_tag="dummy", by="iteration")  # type: ignore[arg-type]

@@ -6,7 +6,7 @@ from pathlib import Path
 
 class RunRecord(BaseModel):
     status: Status
-    relpath: Path = Path('.')
+    # relpath: Path = Path('.')
     param_hash: int | None = None
     files: dict[str, Path] = {}
     timestamp_status_lst: list[tuple[datetime, Status]] = []

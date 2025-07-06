@@ -1,205 +1,283 @@
 """
-ledger.py
-=========
-JSON-backed run ledger that is **safe for multiprocessing** and keeps
-its in-memory footprint small by loading the file fresh for every write
-operation (“lazy reload on write”).
+ledger.py — v2
+==============
 
-Concurrency model
------------------
-• A single `multiprocessing.Lock` is created by the parent script and
-  passed to every worker via the pool’s *initializer*.
-• All mutating methods (`allocate`, `attach_file`, `log_end`, `save`)
-  acquire this lock so only one process reads-modify-writes the JSON at
-  a time.
-• The ledger content is *not* cached between calls; each mutating method
-  reloads the JSON, applies its change, and writes the file back.
+Light-weight, JSON-backed *run ledger* for experiment tracking.
+Each run is stored under the triple (identifier, relpath, uid).
+
+Quick usage
+-----------
+>>> led = Ledger("results/metadata.json")
+>>> uid = led.allocate("train", relpath=Path("grid/lr-1e3"))
+>>> led.log("train", uid, status=Status.DONE)
+
+What to keep in mind
+--------------------
+- Pass `relpath` as a *relative* `Path`; use `Path("")` for the project
+  root.  The ledger does **no** path validation beyond converting it to
+  a string key.
+- One `multiprocessing.Lock` (set by `set_global_lock`) serialises every
+  write; reads are lock-free.
+- UID counters are independent for each (identifier, relpath) pair.
 """
 
 from __future__ import annotations
 
-from collections import defaultdict
-from datetime import datetime
-from pathlib import Path
-
 import json
-from multiprocessing import Lock
-from pydantic import BaseModel, Field, TypeAdapter, validate_call
-from pydantic import dataclasses
 from contextlib import contextmanager, nullcontext
-from typing import ContextManager
-from typing import Generator, Literal, TypeAlias
-# from collections.abc import Generator
+from datetime import datetime
+from multiprocessing import Lock
+from pathlib import Path
+from typing import Generator, TypeAlias
 
+from pydantic import TypeAdapter
+
+from .naming_strategy import counter_naming_strategy
+from .run_record import RunRecord
 from .singleton import PerPathSingleton
 from .status import Status
-from .naming_strategy import counter_naming_strategy
 
-from .run_record import RunRecord
+# ---------------------------------------------------------------------
+#  Globals
+# ---------------------------------------------------------------------
 
-# ------------------------------------------------------------------ #
-# global multiprocessing lock (set once by the pool initializer)
-# ------------------------------------------------------------------ #
-LEDGER_LOCK: Lock | None = None
-UID_RECORD_DICT: TypeAlias = dict[str, RunRecord]
-DATA_STRUCTURE = dict[str, UID_RECORD_DICT]  # type alias for the ledger data structure
-DATA_STRUCTURE_MODEL = TypeAdapter(DATA_STRUCTURE)
-
-
-def _locked(fn):
-    """Wrap *fn* with the global LEDGER_LOCK if running under a pool."""
-
-    def wrapper(self, *args, **kwargs):
-        if LEDGER_LOCK is None:  # serial mode
-            return fn(self, *args, **kwargs)
-        with LEDGER_LOCK:
-            return fn(self, *args, **kwargs)
-
-    return wrapper
+LEDGER_LOCK: Lock | None = None   # installed once in the pool initializer
 
 
 def set_global_lock(lock: Lock | None) -> None:
-    """Install the (multiprocessing-) lock that serialises all writers."""
+    """Register the writer lock used by all processes."""
     global LEDGER_LOCK
     LEDGER_LOCK = lock
 
 
-# ------------------------------------------------------------------ #
-# ledger: one instance per file / per process
-# ------------------------------------------------------------------ #
-class Ledger(metaclass=PerPathSingleton):
-    """
-    Usage
-    -----
-    >>> led = Ledger(path="results/metadata.json")
-    >>> base = led.allocate("calibration", prefix="", hint=None)
-    """
+# ---------------------------------------------------------------------
+#  Type aliases & helpers
+# ---------------------------------------------------------------------
 
-    def __init__(self, path: str | Path, maxsize: int = 1000):
+UID_RECORD_DICT: TypeAlias = dict[str, RunRecord]          # uid   -> record
+RELPATH_DICT:     TypeAlias = dict[str, UID_RECORD_DICT]   # rel   -> …
+DATA_STRUCTURE:   TypeAlias = dict[str, RELPATH_DICT]      # ident -> …
+
+DATA_ADAPTER = TypeAdapter(DATA_STRUCTURE)
+
+
+def _relkey(relpath: Path) -> str:
+    """
+    Turn a `Path` into the JSON key.
+
+    Path("") or Path(".") -> ""
+    everything else       -> POSIX string
+    """
+    s = relpath.as_posix()
+    return "" if s in ("", ".") else s
+
+
+# ---------------------------------------------------------------------
+#  Ledger
+# ---------------------------------------------------------------------
+
+class Ledger(metaclass=PerPathSingleton):
+    """One instance per metadata.json *per process*."""
+
+    # -----------------------------------------------------------------
+    #  Life-cycle
+    # -----------------------------------------------------------------
+    def __init__(self, path: str | Path, maxsize: int = 1000) -> None:
         self.file: Path = Path(path).expanduser().resolve()
         self.file.parent.mkdir(parents=True, exist_ok=True)
+
         self.maxsize = maxsize
-        self._data: DATA_STRUCTURE = {}
+        self._data: DATA_STRUCTURE = {}        # lazy cache
 
-    # --------------- public, lock-protected API ---------------- #
-
-    # @_locked  # keep top-level lock here; internals are unlocked now
+    # -----------------------------------------------------------------
+    #  Public API
+    # -----------------------------------------------------------------
     def allocate(
-            self,
-            identifier: str,
-            status: Status = Status.PENDING,
-            relpath: Path | str = '.',
-            param_hash: int | None = None,
+        self,
+        identifier: str,
+        *,
+        status: Status = Status.PENDING,
+        relpath: Path = Path(""),
+        param_hash: int | None = None,
     ) -> str:
         """
-        Reserve a fresh *uid* for *identifier* and create an initial RunRecord.
+        Reserve a fresh uid for (identifier, relpath) and create
+        the first RunRecord.
+
+        Returns
+        -------
+        uid : str      zero-padded counter ("000", "001", …)
         """
-        # print("lock id in allocate:", id(LEDGER_LOCK))  # diagnostic
-        with self._edit_uid_record_dict(identifier) as uid_records:
-            uid = counter_naming_strategy(list(uid_records.keys()), maxsize=self.maxsize)
+        rkey = _relkey(relpath)
 
-            record = RunRecord(status=status,
-                               param_hash=param_hash,
-                               relpath=relpath)
-            record.timestamp_status()  # first stamp
-            uid_records[uid] = record
-
+        with self._edit_uid_record_dict(identifier, rkey) as uid_dict:
+            uid = counter_naming_strategy(uid_dict.keys(), maxsize=self.maxsize)
+            record = RunRecord(
+                status=status,
+                param_hash=param_hash,
+            )
+            record.timestamp_status()
+            uid_dict[uid] = record
             return uid
 
-    @validate_call
+    # -----------------------------------------------------------------
     def log(
-            self,
-            identifier: str,
-            uid: str,
-            *,
-            status: Status | None = None,
-            path_dict: dict[str, Path] | None = None,
+        self,
+        identifier: str,
+        uid: str,
+        *,
+        relpath: Path = Path(""),
+        status: Status | None = None,
+        path_dict: dict[str, Path] | None = None,
     ) -> None:
+        """
+        Update an existing run.
 
-        """Add a status transition and/or attach files to an existing run."""
+        - status     : new lifecycle status (optional)
+        - path_dict  : artefact name -> file path (optional)
+        """
         if not (status or path_dict):
             return
 
-        with self._edit_record(identifier, uid) as record:
+        rkey = _relkey(relpath)
+        with self._edit_record(identifier, rkey, uid) as rec:
             if status:
-                record.status = status
-                record.timestamp_status()
+                rec.status = status
+                rec.timestamp_status()
             if path_dict:
-                record.files.update(path_dict)
+                rec.files.update(path_dict)
 
-    def get_record(self, identifier: str, uid: str) -> RunRecord:
+    # -----------------------------------------------------------------
+    def get_record(
+        self,
+        identifier: str,
+        uid: str,
+        *,
+        relpath: Path = Path(""),
+    ) -> RunRecord:
+        """Return a single RunRecord; raises KeyError if not found."""
+        rkey = _relkey(relpath)
+        data = self._load()
+        try:
+            return data[identifier][rkey][uid]
+        except KeyError as exc:
+            raise KeyError(
+                f"run not found: identifier='{identifier}', relpath='{rkey}', "
+                f"uid='{uid}'"
+            ) from exc
+
+    def get_uid_record_dict(
+        self,
+        identifier: str,
+        *,
+        relpath: Path = Path(""),
+    ):
         """
-        Retrieve a run record by its identifier and uid.
+        Fetch many records.
+
+        - relpath given -> dict[uid, RunRecord]
+        - relpath None  -> dict[relpath, dict[uid, RunRecord]]
         """
         data = self._load()
-        if identifier not in data or uid not in data[identifier]:
-            raise KeyError(f"No run found for identifier '{identifier}' and uid '{uid}'")
-        return data[identifier][uid]
+        if identifier not in data:
+            return {}
 
-    def get_uid_record_dict(self, identifier: str) -> UID_RECORD_DICT:
-        """
-        Retrieve all run records for a given identifier.
-        """
-        data = self._load()
-        return data.get(identifier, {})
+        rkey = _relkey(relpath)
+        return data[identifier].get(rkey, {})
 
-    def load(self) -> DATA_STRUCTURE:
+    def load(self):
         return self._load()
 
-    def find_by_param_hash(self, identifier: str, param_hash: int | None = None) -> tuple[str, RunRecord] | None:
+    def find_by_param_hash(
+        self,
+        identifier: str,
+        param_hash: int,
+        *,
+        relpath: Path = Path(""),
+    ) -> tuple[str, RunRecord] | None:
         """
-        Find a run by its identifier and uid.
-        requires coherent data READ
+        Linear scan for a run with matching param_hash.
+        Returns (uid, RunRecord) or None.
         """
-        if param_hash is None:
-            return None
 
-        uid_records_dict = self.get_uid_record_dict(identifier)
-        match = ((u, r) for u, r in uid_records_dict.items() if r.param_hash == param_hash)
-        return next(match, None)
+        # if relpath is None:
+        #     uid_iter = (
+        #         (u, r)
+        #         for uid_dict in self.get_uid_record_dict(identifier).values()
+        #         for u, r in uid_dict.items()
+        #     )
+        # else:
+        #     rkey = _relkey(relpath)
+        uid_iter = self.get_uid_record_dict(identifier, relpath=relpath).items()
 
-    # ------------------------------------------------------------------
+        return next(((u, r) for u, r in uid_iter if r.param_hash == param_hash), None)
 
+    # -----------------------------------------------------------------
+    #  Internals: context helpers
+    # -----------------------------------------------------------------
     @contextmanager
-    def _edit_uid_record_dict(self, identifier) -> Generator[UID_RECORD_DICT, None, None]:
-        # data = self._load()
+    def _edit_uid_record_dict(
+        self,
+        identifier: str,
+        relkey: str,
+    ) -> Generator[UID_RECORD_DICT, None, None]:
+        """
+        Yield the uid-dict for mutation and persist on exit
+        (wrapped by the global lock).
+        """
         with self._edit_data() as data:
-            yield data.setdefault(identifier, {})
-            # uid_record_dict = data.get(identifier, {})
-            # data[identifier] = uid_record_dict
-            # yield uid_record_dict
+            rel_dict = data.setdefault(identifier, {})
+            yield rel_dict.setdefault(relkey, {})
 
     @contextmanager
-    def _edit_record(self, identifier: str, uid: str) -> Generator[RunRecord, None, None]:
-        with self._edit_uid_record_dict(identifier) as records_dict:
-            if uid not in records_dict:
-                raise KeyError(f"No run found for identifier '{identifier}' and uid '{uid}'")
-            yield records_dict[uid]
+    def _edit_record(
+        self,
+        identifier: str,
+        relkey: str,
+        uid: str,
+    ) -> Generator[RunRecord, None, None]:
+        """Yield a mutable RunRecord while guaranteeing persistence."""
+        with self._edit_uid_record_dict(identifier, relkey) as uid_dict:
+            if uid not in uid_dict:
+                raise KeyError(
+                    f"run not found: identifier='{identifier}', relpath='{relkey}', "
+                    f"uid='{uid}'"
+                )
+            yield uid_dict[uid]
 
-    # ------------------------------------------------------------------
-
+    # -----------------------------------------------------------------
+    #  Disk I/O   (all writes go through _edit_data & optional lock)
+    # -----------------------------------------------------------------
     def _load(self) -> DATA_STRUCTURE:
-        """Read the ledger JSON and updates in-memory dict; return an in-memory dict."""
+        """Return cached data or load from disk if needed (no lock)."""
         if not self.file.exists():
             return {}
 
-        data = self.file.read_bytes()
-        self._data = DATA_STRUCTURE_MODEL.validate_json(data)
+        try:
+            data = DATA_ADAPTER.validate_json(self.file.read_bytes())
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(f"failed to parse {self.file}: {exc}") from exc
 
-        return self._data
+        self._data = data
+        return data
 
-    # @_locked
     @contextmanager
-    def _edit_data(self):
+    def _edit_data(self) -> Generator[DATA_STRUCTURE, None, None]:
+        """
+        Context manager that:
+        1. acquires the global lock (if any),
+        2. loads JSON,
+        3. yields it for mutation,
+        4. writes it back.
+        """
         lock = LEDGER_LOCK or nullcontext()
         with lock:
             data = self._load()
             yield data
             self._save(data)
 
-    def _save(self, data) -> None:
-        """Write *runs* back to disk, pretty-printed."""
-        # writes to disk
-        serialized_data = DATA_STRUCTURE_MODEL.dump_json(data, indent=2)
+    def _save(self, data: DATA_STRUCTURE) -> None:
+        """Pretty-print JSON to disk and update the in-memory cache."""
+        serialized_data = DATA_ADAPTER.dump_json(data, indent=2)
         self.file.write_bytes(serialized_data)
-        self._data = data  # update in-memory cache
+        self._data = data

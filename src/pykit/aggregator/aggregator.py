@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import reduce
 from pathlib import Path
 from typing import Any, Literal
 
@@ -7,7 +8,6 @@ from pydantic import BaseModel, Field, TypeAdapter
 
 from ..dict_utils import flatten_with_pretty_keys, apply_adapter
 from ..load import load_json
-from ..utils import PathLike
 from ..ledger import Ledger, UID_RECORD_DICT
 
 
@@ -30,28 +30,34 @@ class Aggregator(BaseModel):
     error raises immediately – no silent row skipping.
     """
 
-    name_to_identifier_lst: dict[str, list[str]] = Field(
+    name_to_identifier_dict: dict[str, list[str]] = Field(
         ..., description="Aggregation recipe: group name → list of identifiers."
     )
-    ledger_file_path: PathLike = Field(
-        ..., description="Path to the `ledger.json` file."
-    )
+
+    # ledger_file_path: PathLike = Field(
+    #     ..., description="Path to the `ledger.json` file."
+    # )
 
     # ------------------------------------------------------------------ #
     # public API                                                          #
     # ------------------------------------------------------------------ #
     def aggregate(
-        self,
-        file_tag: str,
-        *,
-        by: Literal["uid"] = "uid",
-        adapter: TypeAdapter | None = None,
+            self,
+            ledger: Ledger,
+            file_tag: str,
+            *,
+            relpath: Path = Path(""),
+            by: Literal["uid"] = "uid",
+            adapter: TypeAdapter | None = None,
     ) -> dict[str, list[dict[str, Any]]]:
         """
         Merge *file_tag* artefacts for every aggregation group.
 
         Parameters
         ----------
+        ledger
+            A Ledger instance, used to load records in which the files
+            to aggregation are found
         file_tag
             Key in :pyattr:`RunRecord.files` that points to the JSON
             artefact to merge.
@@ -77,14 +83,15 @@ class Aggregator(BaseModel):
         if by != "uid":
             raise ValueError(f"Unsupported 'by' mode: {by!r}")
 
-        ledger = Ledger(path=self.ledger_file_path)          # lazy-load
-        data: dict[str, UID_RECORD_DICT] = ledger.load()     # id → {uid: RunRecord}
+        unique_identifiers = reduce(lambda x, y: x | set(y), self.name_to_identifier_dict.values(), set())
+        data: dict[str, UID_RECORD_DICT] = {id_: ledger.get_uid_record_dict(id_, relpath=relpath)
+                                            for id_ in unique_identifiers}  # id → {uid: RunRecord}
 
         aggregated: dict[str, list[dict[str, Any]]] = {
-            group: [] for group in self.name_to_identifier_lst
+            group: [] for group in self.name_to_identifier_dict
         }
 
-        for group_name, identifiers in self.name_to_identifier_lst.items():
+        for group_name, identifiers in self.name_to_identifier_dict.items():
             common_uids = sorted(self._uids_common_to_all(identifiers, data))
 
             uid_path_pairs = (
@@ -104,8 +111,8 @@ class Aggregator(BaseModel):
     # ------------------------------------------------------------------ #
     @staticmethod
     def _uids_common_to_all(
-        identifiers: list[str],
-        data: dict[str, UID_RECORD_DICT],
+            identifiers: list[str],
+            data: dict[str, UID_RECORD_DICT],
     ) -> set[str]:
         """Return UIDs present under **all** given identifiers."""
         uid_sets = (set(data.get(i, {})) for i in identifiers)
@@ -116,8 +123,8 @@ class Aggregator(BaseModel):
     # ------------------------------------------------------------------ #
     @staticmethod
     def _load_and_merge_row(
-        paths: list[Path],
-        adapter: TypeAdapter | None = None,
+            paths: list[Path],
+            adapter: TypeAdapter | None = None,
     ) -> dict[str, Any]:
         """
         Merge a single UID’s artefacts.
@@ -142,17 +149,17 @@ class Aggregator(BaseModel):
                 raise FileNotFoundError(path)
 
             try:
-                raw_payload = load_json(path)          # -> dict
+                raw_payload = load_json(path)  # -> dict
                 payload = apply_adapter(raw_payload, adapter=adapter)
 
                 flat = (
                     flatten_with_pretty_keys(payload)  # dict branch
                     if isinstance(payload, dict)
-                    else payload.flatten()             # typed model branch
+                    else payload.flatten()  # typed model branch
                 )
                 merged.update(flat)
 
-            except Exception as exc:                   # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
                 raise RuntimeError(f"while processing {path}") from exc
 
         return merged
