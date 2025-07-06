@@ -24,7 +24,6 @@ class SweepAbstract(ABC, Generic[T]):
     def generate(self) -> Iterable[T]:
         pass
 
-
     def len(self):
         return len(list(self.generate()))
 

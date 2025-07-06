@@ -34,6 +34,14 @@ class Session:
         self.ledger.log(self.identifier, self.uid, path_dict=path_dict)
 
     @property
+    def files(self) -> dict[str, Path]:
+        files_dict = self.ledger.get_record(self.identifier, self.uid).files
+        return {k: Path(v) for k, v in files_dict.items()}
+
+    def is_done(self) -> bool:
+        return self.status == Status.DONE
+
+    @property
     def folder(self) -> Path:
         path = self.project_path
         if self.storage_mode == StorageMode.SUBFOLDER:

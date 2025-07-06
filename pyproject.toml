@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
-    "matplotlib>=3.10.3",
+    "matplotlib",
     "pint>=0.24.4",
     "pydantic>=2.11.7",
     "pytest>=8.4.1",

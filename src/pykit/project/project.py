@@ -76,7 +76,7 @@ class Project(BaseModel):
                 params: dict | None = None,
                 existing_run_strategy: ExistingRun = None,
                 storage_mode: StorageMode = None
-                ) -> Session | None:  # may return None when SKIP
+                ) -> Session:  # may return None when SKIP
 
         # if resume try to find the current run record
         existing_run_strategy = existing_run_strategy or self.existing_run_strategy
