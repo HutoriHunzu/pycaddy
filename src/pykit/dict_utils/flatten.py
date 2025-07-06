@@ -14,3 +14,8 @@ def flatten(d: dict, parent_key=(), adapter: TypeAdapter = None) -> dict[tuple, 
         else:
             items[new_key] = v
     return items
+
+
+def flatten_with_pretty_keys(d: dict, sep: str = '__', adapter: TypeAdapter = None) -> dict[str, Any]:
+    flat = flatten(d, adapter=adapter)
+    return {sep.join(k): v for k, v in flat.items()}

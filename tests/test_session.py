@@ -67,7 +67,7 @@ def test_subfolder_path_builder(proj: Project, tmp_path):
     run.attach_files({"metrics": str(metrics)})
 
     record = proj.ledger.get_record("exp", run.uid)
-    assert record.files["metrics"] == str(metrics)
+    assert record.files["metrics"] == metrics
 
 
 # ----------------------------------------------------------------------

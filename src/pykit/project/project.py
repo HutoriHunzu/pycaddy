@@ -25,7 +25,7 @@ from ..dict_utils import hash_dict
 
 from .structs import StorageMode, ExistingRun
 
-from .utils import PathLike, AbsolutePathLike
+from ..utils import PathLike, AbsolutePathLike
 
 
 # ─────────────────────────────── class ────────────────────────────── #

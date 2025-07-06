@@ -1,33 +1,15 @@
 # tests/test_project.py
 from __future__ import annotations
 
-from pathlib import Path
-import pytest
-
-from pykit.project import Project
 from pykit.project.structs import StorageMode, ExistingRun
 from pykit.ledger import Status
 
-
-# ----------------------------------------------------------------------
-# fixtures
-# ----------------------------------------------------------------------
-@pytest.fixture
-def project(tmp_path) -> Project:
-    """
-    A fresh project rooted in a temporary folder, defaulting to SUBFOLDER
-    storage.  Each test gets its own isolated ledger file.
-    """
-    root = tmp_path / "results"
-    proj = Project(root=root)
-    proj.ensure_folder()
-    return proj
 
 
 # ----------------------------------------------------------------------
 # basic navigation
 # ----------------------------------------------------------------------
-def test_sub_appends_relpath_and_shares_ledger(project: Project):
+def test_sub_appends_relpath_and_shares_ledger(project):
     child = project.sub("child")
 
     # root stays the same, relpath grows
@@ -41,7 +23,7 @@ def test_sub_appends_relpath_and_shares_ledger(project: Project):
 # ----------------------------------------------------------------------
 # session creation & folder layout (SUBFOLDER mode)
 # ----------------------------------------------------------------------
-def test_session_allocates_record_and_makes_uid_folder(project: Project):
+def test_session_allocates_record_and_makes_uid_folder(project):
     run = project.session(
         "train",
         params={"lr": 0.1},
@@ -65,7 +47,7 @@ def test_session_allocates_record_and_makes_uid_folder(project: Project):
 # ----------------------------------------------------------------------
 # path-building rules in PREFIX mode
 # ----------------------------------------------------------------------
-def test_prefix_storage_mode_paths(project: Project):
+def test_prefix_storage_mode_paths(project):
     grid_proj = project.sub("grid")
 
     run = grid_proj.session(
@@ -87,7 +69,7 @@ def test_prefix_storage_mode_paths(project: Project):
 # ----------------------------------------------------------------------
 # resume logic via ExistingRun.RESUME
 # ----------------------------------------------------------------------
-def test_resume_returns_existing_uid(project: Project):
+def test_resume_returns_existing_uid(project):
     # First run – mark it DONE
     first = project.session(
         "train",

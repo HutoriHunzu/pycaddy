@@ -37,8 +37,8 @@ def test_log_can_attach_files(ledger, tmp_path):
     ledger.log("A", uid, path_dict={"metrics": str(metrics)})
 
     record = ledger.get_record("A", uid)
-    assert "metrics" in record.files
-    assert record.files["metrics"] == str(metrics)
+    assert "metrics" in str(record.files)
+    assert record.files["metrics"] == metrics
 
 # ----------------------------------------------------------------------
 def test_find_by_param_hash(ledger):

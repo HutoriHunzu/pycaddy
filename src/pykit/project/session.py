@@ -1,7 +1,5 @@
 from dataclasses import dataclass
-from pydantic import BaseModel, Field, PrivateAttr
-from .utils import PathLike
-from ..ledger import Ledger, RunRecord, Status
+from ..ledger import Ledger, Status
 from pathlib import Path
 from .structs import StorageMode
 
@@ -30,7 +28,7 @@ class Session:
     def done(self):
         self.ledger.log(self.identifier, self.uid, status=Status.DONE)
 
-    def attach_files(self, path_dict: dict[str, str | Path]):
+    def attach_files(self, path_dict: dict[str, Path]):
         self.ledger.log(self.identifier, self.uid, path_dict=path_dict)
 
     @property

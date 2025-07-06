@@ -24,7 +24,7 @@ from pathlib import Path
 
 import json
 from multiprocessing import Lock
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter, validate_call
 from pydantic import dataclasses
 from contextlib import contextmanager, nullcontext
 from typing import ContextManager
@@ -106,14 +106,16 @@ class Ledger(metaclass=PerPathSingleton):
 
             return uid
 
+    @validate_call
     def log(
             self,
             identifier: str,
             uid: str,
             *,
             status: Status | None = None,
-            path_dict: dict[str, str] | None = None,
+            path_dict: dict[str, Path] | None = None,
     ) -> None:
+
         """Add a status transition and/or attach files to an existing run."""
         if not (status or path_dict):
             return
@@ -140,8 +142,9 @@ class Ledger(metaclass=PerPathSingleton):
         """
         data = self._load()
         return data.get(identifier, {})
-        # if identifier not in data:
-        #     raise KeyError(f"No runs found for identifier '{identifier}'")
+
+    def load(self) -> DATA_STRUCTURE:
+        return self._load()
 
     def find_by_param_hash(self, identifier: str, param_hash: int | None = None) -> tuple[str, RunRecord] | None:
         """
