@@ -43,8 +43,8 @@ def test_concurrent_allocate_log_cross_platform():
         # Use a process pool so the initializer runs once per worker
         with mp.Pool(
             processes=2,
-            initializer=_init_lock,
-            initargs=(lock,),
+            # initializer=_init_lock,
+            # initargs=(lock,),
         ) as pool:
             # Each worker performs 50 allocate+log operations
             pool.starmap(_worker, [(str(meta_file), 50)] * 2)

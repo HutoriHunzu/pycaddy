@@ -92,7 +92,9 @@ class Project(BaseModel):
 
         # if strategy is RESUME try to find it by hash
         if params and existing_run_strategy == ExistingRun.RESUME:
-            hit = self.ledger.find_by_param_hash(identifier=identifier, param_hash=param_hash)
+            hit = self.ledger.find_by_param_hash(identifier=identifier,
+                                                 relpath=self.relpath,
+                                                 param_hash=param_hash)
             if hit:
                 uid, record = hit
 
@@ -100,8 +102,8 @@ class Project(BaseModel):
         # the strategy is to create NEW record
         if not uid or existing_run_strategy == ExistingRun.NEW:
             uid = self.ledger.allocate(identifier=identifier,
-                                               relpath=self.relpath,
-                                               param_hash=param_hash)
+                                       relpath=self.relpath,
+                                       param_hash=param_hash)
 
         assert (uid is not None)
 

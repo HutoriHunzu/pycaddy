@@ -29,7 +29,7 @@ from datetime import datetime
 from multiprocessing import Lock
 from pathlib import Path
 from typing import Generator, TypeAlias
-
+from filelock import FileLock
 from pydantic import TypeAdapter
 
 from .naming_strategy import counter_naming_strategy
@@ -41,13 +41,13 @@ from .status import Status
 #  Globals
 # ---------------------------------------------------------------------
 
-LEDGER_LOCK: Lock | None = None   # installed once in the pool initializer
-
-
-def set_global_lock(lock: Lock | None) -> None:
-    """Register the writer lock used by all processes."""
-    global LEDGER_LOCK
-    LEDGER_LOCK = lock
+# LEDGER_LOCK: Lock | None = None   # installed once in the pool initializer
+#
+#
+# def set_global_lock(lock: Lock | None) -> None:
+#     """Register the writer lock used by all processes."""
+#     global LEDGER_LOCK
+#     LEDGER_LOCK = lock
 
 
 # ---------------------------------------------------------------------
@@ -88,6 +88,10 @@ class Ledger(metaclass=PerPathSingleton):
 
         self.maxsize = maxsize
         self._data: DATA_STRUCTURE = {}        # lazy cache
+
+        # NEW: always use a file-based lock
+        self._file_lock_path = self.file.with_suffix(".lock")
+        self._file_lock = FileLock(str(self._file_lock_path))
 
     # -----------------------------------------------------------------
     #  Public API
@@ -272,6 +276,13 @@ class Ledger(metaclass=PerPathSingleton):
         """
         lock = LEDGER_LOCK or nullcontext()
         with lock:
+            data = self._load()
+            yield data
+            self._save(data)
+
+    @contextmanager
+    def _edit_data(self) -> Generator[DATA_STRUCTURE, None, None]:
+        with self._file_lock:
             data = self._load()
             yield data
             self._save(data)
