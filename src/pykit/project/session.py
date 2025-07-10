@@ -49,10 +49,14 @@ class Session:
         path.mkdir(parents=True, exist_ok=True)
         return path
 
-    def path(self, name: str = None,
-             include_identifier: bool = True):
+    def path(self,
+             name: str = None,
+             suffix: str = '',
+             include_identifier: bool = True,
+             include_uid: bool = True):
+
         file_name_list = []
-        if self.storage_mode == StorageMode.PREFIX:
+        if self.storage_mode == StorageMode.PREFIX and include_uid:
             file_name_list.append(self.uid)
 
         if include_identifier:
@@ -61,7 +65,12 @@ class Session:
         if name:
             file_name_list.append(name)
 
-        return self.folder / '_'.join(file_name_list)
+        path = self.folder / '_'.join(file_name_list)
+
+        if path.suffix == '':
+            path = path.with_suffix(suffix)
+
+        return path
 
 
     # def __enter__(self):

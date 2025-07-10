@@ -1,2 +1,2 @@
-from .project import Project
+from .project import Project, StorageMode
 from .session import Session
