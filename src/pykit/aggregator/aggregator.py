@@ -30,7 +30,7 @@ class Aggregator(BaseModel):
     error raises immediately – no silent row skipping.
     """
 
-    name_to_identifier_dict: dict[str, list[str]] = Field(
+    identifiers: list[str] = Field(
         ..., description="Aggregation recipe: group name → list of identifiers."
     )
 
@@ -46,7 +46,7 @@ class Aggregator(BaseModel):
             ledger: Ledger,
             file_tag: str,
             *,
-            relpath: Path = Path(""),
+            relpath: Path = Path(''),
             by: Literal["uid"] = "uid",
             adapter: TypeAdapter | None = None,
     ) -> dict[str, list[dict[str, Any]]]:
@@ -61,6 +61,8 @@ class Aggregator(BaseModel):
         file_tag
             Key in :pyattr:`RunRecord.files` that points to the JSON
             artefact to merge.
+        relpath
+            Path to be passed for finding the correct runs
         by
             Tag column for the resulting rows.  Only ``'uid'`` is
             supported today.
@@ -70,7 +72,7 @@ class Aggregator(BaseModel):
 
         Returns
         -------
-        dict[str, list[dict[str, Any]]]
+        list[dict[str, Any]]
             ``{group_name: [row, …]}``
 
         Raises
@@ -83,26 +85,27 @@ class Aggregator(BaseModel):
         if by != "uid":
             raise ValueError(f"Unsupported 'by' mode: {by!r}")
 
-        unique_identifiers = reduce(lambda x, y: x | set(y), self.name_to_identifier_dict.values(), set())
+        # unique_identifiers = reduce(lambda x, y: x | set(y), self.name_to_identifier_dict.values(), set())
+        unique_identifiers = set(self.identifiers)
         data: dict[str, UID_RECORD_DICT] = {id_: ledger.get_uid_record_dict(id_, relpath=relpath)
                                             for id_ in unique_identifiers}  # id → {uid: RunRecord}
 
-        aggregated: dict[str, list[dict[str, Any]]] = {
-            group: [] for group in self.name_to_identifier_dict
-        }
+        # aggregated: dict[str, list[dict[str, Any]]] = {
+        #     group: [] for group in self.name_to_identifier_dict
+        # }
 
-        for group_name, identifiers in self.name_to_identifier_dict.items():
-            common_uids = sorted(self._uids_common_to_all(identifiers, data))
+        # for group_name, identifiers in self.name_to_identifier_dict.items():
+        common_uids = sorted(self._uids_common_to_all(unique_identifiers, data))
 
-            uid_path_pairs = (
-                (uid, [data[id_][uid].files[file_tag] for id_ in identifiers])
-                for uid in common_uids
-            )
+        uid_path_pairs = (
+            (uid, [data[id_][uid].files[file_tag] for id_ in unique_identifiers])
+            for uid in common_uids
+        )
 
-            aggregated[group_name] = [
-                self._load_and_merge_row(paths, adapter) | {by: uid}
-                for uid, paths in uid_path_pairs
-            ]
+        aggregated = [
+            self._load_and_merge_row(paths, adapter) | {by: uid}
+            for uid, paths in uid_path_pairs
+        ]
 
         return aggregated
 

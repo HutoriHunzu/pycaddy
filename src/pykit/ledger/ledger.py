@@ -102,7 +102,7 @@ class Ledger(metaclass=PerPathSingleton):
         *,
         status: Status = Status.PENDING,
         relpath: Path = Path(""),
-        param_hash: int | None = None,
+        param_hash: str | None = None,
     ) -> str:
         """
         Reserve a fresh uid for (identifier, relpath) and create
@@ -118,7 +118,7 @@ class Ledger(metaclass=PerPathSingleton):
             uid = counter_naming_strategy(uid_dict.keys(), maxsize=self.maxsize)
             record = RunRecord(
                 status=status,
-                param_hash=param_hash,
+                param_hash=param_hash
             )
             record.timestamp_status()
             uid_dict[uid] = record
@@ -195,7 +195,7 @@ class Ledger(metaclass=PerPathSingleton):
     def find_by_param_hash(
         self,
         identifier: str,
-        param_hash: int,
+        param_hash: str,
         *,
         relpath: Path = Path(""),
     ) -> tuple[str, RunRecord] | None:

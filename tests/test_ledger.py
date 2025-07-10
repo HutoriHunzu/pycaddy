@@ -42,12 +42,12 @@ def test_log_can_attach_files(ledger, tmp_path):
 
 # ----------------------------------------------------------------------
 def test_find_by_param_hash(ledger):
-    uid_foo = ledger.allocate("A", param_hash=hash("foo"))
-    ledger.allocate("A", param_hash=hash("bar"))
-    hit_uid, hit_record = ledger.find_by_param_hash("A", hash("foo"))
+    uid_foo = ledger.allocate("A", param_hash="foo")
+    ledger.allocate("A", param_hash="bar")
+    hit_uid, hit_record = ledger.find_by_param_hash("A", "foo")
 
     assert hit_uid == uid_foo
-    assert hit_record.param_hash == hash("foo")
+    assert hit_record.param_hash == "foo"
 
 # ----------------------------------------------------------------------
 def test_log_noop_fast_exit(ledger):

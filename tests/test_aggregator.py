@@ -39,11 +39,9 @@ def test_aggregate_basic(project, tmp_path: Path):
 
     grouping_config = {'grp': list(id_to_payloads.keys())}
 
-    agg = Aggregator(
-        name_to_identifier_dict=grouping_config
-    )
+    out = {k: Aggregator(identifiers=v).aggregate(file_tag=file_tag, ledger=project.ledger)
+           for k, v in grouping_config.items()}
 
-    out = agg.aggregate(file_tag=file_tag, ledger=project.ledger)
 
     assert list(out) == ["grp"]
     rows = out["grp"]
@@ -84,12 +82,12 @@ def test_aggregate_with_adapter(project, tmp_path: Path):
             save_json(p, payload)
             session.attach_files({file_tag: p})
 
-    agg = Aggregator(
-        name_to_identifier_dict={"vec": list(id_to_payloads.keys())},
-    )
+    grouping_config = {"vec": list(id_to_payloads.keys())}
+
 
     adapter = TypeAdapter(Point)
-    out = agg.aggregate(file_tag=file_tag, adapter=adapter, ledger=project.ledger)
+    out = {k: Aggregator(identifiers=v).aggregate(file_tag=file_tag, ledger=project.ledger, adapter=adapter)
+           for k, v in grouping_config.items()}
 
     assert out['vec'] == expected
 
@@ -104,9 +102,7 @@ def test_missing_file_raises(project, tmp_path: Path):
     missing = tmp_path / "nowhere.json"
     session.attach_files({file_tag: missing})
 
-    agg = Aggregator(
-        name_to_identifier_dict={"g": ["I1"]},
-    )
+    agg = Aggregator(identifiers=["I1"])
 
     with pytest.raises(FileNotFoundError):
         _ = agg.aggregate(file_tag=file_tag, ledger=project.ledger)

@@ -111,7 +111,8 @@ class Project(BaseModel):
             ledger=self.ledger,
             identifier=identifier,
             uid=uid,
-            project_path=self.absolute_path,
+            relpath=self.relpath,
+            absolute_path=self.absolute_path,
             param_hash=param_hash,
             storage_mode=storage_mode
         )
