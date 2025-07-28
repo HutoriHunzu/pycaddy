@@ -103,7 +103,7 @@ def inverse(unit: str, target_unit: str):
     return f'{inverse_quantity.units:~}'
 
 
-def parse_quantity(s: str, unit: str | None) -> tuple[float, str]:
+def parse_quantity(s: str, unit: str | None = None) -> tuple[float, str]:
     """
     Create a Quantity object with the given value and unit.
     """
