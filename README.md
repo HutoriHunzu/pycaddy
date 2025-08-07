@@ -1,48 +1,68 @@
-## pykit
+# pycaddy
 
-### introduction
-This repository contains different tools that may be useful for automation of tasks.
-Below is a short list of some of the tools available in this repository.
+A Python toolbox caddy for experiment tracking, parameter sweeping, and automation tasks.
 
-#### Sweeper
-Allows the user to sweep through different values in a nested dictionary:
+## Installation
+
+```bash
+pip install pycaddy
+```
+
+## Quick Start
+
+### Experiment Tracking
+
 ```python
-from pykit.sweeper import DictSweep, StrategyName
+from pycaddy.project import Project
 
-data = {
-    'a': [1,2],
-    'b': [3,4]
+# Create a project for organizing experiments  
+project = Project(root="experiments").ensure_folder()
+
+# Start a new experiment run
+session = project.session("train", params={"lr": 0.001, "batch_size": 32})
+session.start()
+
+# Your experiment code here...
+model_path = session.path("model.pt")
+# save_model(model_path)
+
+# Mark as completed
+session.done()
+```
+
+### Parameter Sweeping
+
+```python
+from pycaddy.sweeper import DictSweep, StrategyName
+
+# Define parameter space
+params = {
+    'learning_rate': [0.01, 0.001],
+    'batch_size': [16, 32, 64]
 }
 
-my_sweeper = DictSweep(parameters=data, strategy=StrategyName.PRODUCT)
-for elem in my_sweeper.generate():
-    print(elem) 
-
-# Output: {'a' : 1, 'b': 3}
-# Output: {'a' : 1, 'b': 4}
-# Output: {'a' : 2, 'b': 3}
-# Output: {'a' : 2, 'b': 4}
+# Generate all combinations
+sweep = DictSweep(parameters=params, strategy=StrategyName.PRODUCT)
+for config in sweep.generate():
+    print(config)
+    # {'learning_rate': 0.01, 'batch_size': 16}
+    # {'learning_rate': 0.01, 'batch_size': 32}
+    # ... etc
 ```
 
-#### Project
-Helps with creating folders and saving files in a structured way:
-```python
+## Features
 
-from pykit.project import Project
+- **Project Management**: Structured folder organization with automatic metadata tracking
+- **Session Tracking**: Track experiment runs with unique IDs, status, and file attachments  
+- **Parameter Sweeping**: Generate parameter combinations with different strategies
+- **Concurrent Safe**: File-based locking for multi-process experiment tracking
+- **Lightweight**: Minimal dependencies, designed as a dependency toolbox
 
-my_project = Project(root='my_main_folder')
+## License
 
-# let's say I would like to create a subfolder called 'data'
-my_data_folder = my_project.group('data')
+MIT License - see [LICENSE](LICENSE) file.
 
-# next I would like to generate a unique name for my spectroscopy experiment data
-# using .start(identifier) I will get a unique name based on the identifier and also tagged its creation time
-unique_name_to_save_data = my_data_folder.start(identifier='spectroscopy_experiment')
+## Links
 
-# now I finished the experiment and i would like to signal it is done and 
-# also to attach some extra files that are related to this experiment
-my_data_folder.finish(identifier='spectroscopy_experiment', base=unique_name_to_save_data,
-                      path_dict={'extra_information': 'path_to_extra_information.txt'})
-
-```
-
+- **Repository**: https://github.com/HutoriHunzu/pykit
+- **Author**: Uri Goldblatt (uri.goldblatt@gmail.com)

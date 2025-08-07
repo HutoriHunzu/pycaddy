@@ -1,7 +1,7 @@
 import pytest
 from pydantic import TypeAdapter, BaseModel
 from typing_extensions import Literal
-from pykit.sweeper import DictSweep, ChainSweep, StrategyName
+from pycaddy.sweeper import DictSweep, ChainSweep, StrategyName
 from itertools import product
 
 

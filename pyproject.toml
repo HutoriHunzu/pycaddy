@@ -1,12 +1,35 @@
 [project]
-name = "pykit"
+name = "pycaddy"
 version = "0.1.0"
-description = "Add your description here"
+description = "A Python toolbox caddy for experiment tracking, parameter sweeping, and automation tasks"
+authors = [
+    {name = "Uri Goldblatt", email = "uri.goldblatt@gmail.com"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+homepage = "https://github.com/HutoriHunzu/pykit"
+repository = "https://github.com/HutoriHunzu/pykit"
+keywords = ["experiment-tracking", "automation", "parameter-sweep", "toolbox"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 requires-python = ">=3.11"
 dependencies = [
     "filelock>=3.18.0",
     "matplotlib",
     "pint",
     "pydantic>=2.6.4",
+]
+
+[project.optional-dependencies]
+dev = [
     "pytest",
 ]

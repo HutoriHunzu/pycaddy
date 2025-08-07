@@ -1,5 +1,5 @@
 # tests/test_ledger.py
-from pykit.ledger import Status
+from pycaddy.ledger import Status
 
 
 def test_allocate_creates_unique_uids(ledger):

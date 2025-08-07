@@ -1,8 +1,8 @@
 # tests/test_project.py
 from __future__ import annotations
 
-from pykit.project.structs import StorageMode, ExistingRun
-from pykit.ledger import Status
+from pycaddy.project.structs import StorageMode, ExistingRun
+from pycaddy.ledger import Status
 
 
 

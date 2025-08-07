@@ -5,8 +5,8 @@ from typing import Any
 import pytest
 from pydantic import BaseModel, TypeAdapter
 
-from pykit.aggregator import Aggregator  # adjust import to your package layout
-from pykit.save import save_json
+from pycaddy.aggregator import Aggregator  # adjust import to your package layout
+from pycaddy.save import save_json
 
 
 # ----------------------------------------------------------------------

@@ -8,7 +8,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 import time
-from pykit.ledger import Ledger, Status
+from pycaddy.ledger import Ledger, Status
 
 
 # ----------------------------------------------------------------------
@@ -17,7 +17,7 @@ def _init_lock(lock):
     Pool initializer: make the shared lock visible as pykit.ledger.LEDGER_LOCK
     in every child process (works for both 'spawn' and 'fork').
     """
-    import pykit.ledger.ledger as lg  # local import to get the module inside the worker
+    import pycaddy.ledger.ledger as lg  # local import to get the module inside the worker
     lg.LEDGER_LOCK = lock
 
 

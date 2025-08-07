@@ -4,9 +4,9 @@ from __future__ import annotations
 from pathlib import Path
 import pytest
 
-from pykit.project import Project
-from pykit.project.structs import StorageMode, ExistingRun
-from pykit.ledger import Status
+from pycaddy.project import Project
+from pycaddy.project.structs import StorageMode, ExistingRun
+from pycaddy.ledger import Status
 
 
 # ----------------------------------------------------------------------
