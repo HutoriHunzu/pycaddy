@@ -7,8 +7,8 @@ authors = [
 ]
 license = {text = "MIT"}
 readme = "README.md"
-homepage = "https://github.com/HutoriHunzu/pykit"
-repository = "https://github.com/HutoriHunzu/pykit"
+homepage = "https://github.com/HutoriHunzu/pycaddy"
+repository = "https://github.com/HutoriHunzu/pycaddy"
 keywords = ["experiment-tracking", "automation", "parameter-sweep", "toolbox"]
 classifiers = [
     "Development Status :: 3 - Alpha",
