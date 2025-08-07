@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import reduce
 from pathlib import Path
 from typing import Any, Literal
 
@@ -22,16 +21,16 @@ class Aggregator(BaseModel):
         identifiers of that group.
     2.  Loads the same artefact (``file_tag``) from every identifier.
     3.  Optionally validates each payload through a
-        :class:`pydantic.TypeAdapter` → converts it to a typed model.
-    4.  Flattens the (typed or raw) dict and merges the key–value pairs.
+        :class:`pydantic.TypeAdapter` - converts it to a typed model.
+    4.  Flattens the (typed or raw) dict and merges the key-value pairs.
     5.  Returns one consolidated row per UID, plus a ``{by: uid}`` tag.
 
     The implementation is **fail-fast**: any missing file or validation
-    error raises immediately – no silent row skipping.
+    error raises immediately - no silent row skipping.
     """
 
     identifiers: list[str] = Field(
-        ..., description="Aggregation recipe: group name → list of identifiers."
+        ..., description="Aggregation recipe: group name - list of identifiers."
     )
 
     # ledger_file_path: PathLike = Field(
@@ -73,13 +72,13 @@ class Aggregator(BaseModel):
         Returns
         -------
         list[dict[str, Any]]
-            ``{group_name: [row, …]}``
+            ``{group_name: [row, ...]}``
 
         Raises
         ------
         ValueError
-            If *by* ≠ ``'uid'``.
-        FileNotFoundError, RuntimeError, ValidationError, …
+            If *by* != ``'uid'``.
+        FileNotFoundError, RuntimeError, ValidationError, etc
             Anything that goes wrong while reading or validating payloads.
         """
         if by != "uid":
@@ -88,7 +87,7 @@ class Aggregator(BaseModel):
         # unique_identifiers = reduce(lambda x, y: x | set(y), self.name_to_identifier_dict.values(), set())
         unique_identifiers = set(self.identifiers)
         data: dict[str, UID_RECORD_DICT] = {id_: ledger.get_uid_record_dict(id_, relpath=relpath)
-                                            for id_ in unique_identifiers}  # id → {uid: RunRecord}
+                                            for id_ in unique_identifiers}  # id - {uid: RunRecord}
 
         # aggregated: dict[str, list[dict[str, Any]]] = {
         #     group: [] for group in self.name_to_identifier_dict
@@ -134,7 +133,7 @@ class Aggregator(BaseModel):
 
         Workflow
         --------
-        * read file → dict
+        * read file - dict
         * ``apply_adapter`` (optional, creates typed model)
         * flatten (`dict_utils.flatten` if dict, else model.flatten())
 

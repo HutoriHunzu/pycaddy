@@ -7,8 +7,6 @@ authors = [
 ]
 license = {text = "MIT"}
 readme = "README.md"
-homepage = "https://github.com/HutoriHunzu/pycaddy"
-repository = "https://github.com/HutoriHunzu/pycaddy"
 keywords = ["experiment-tracking", "automation", "parameter-sweep", "toolbox"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -32,4 +30,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "ruff"
 ]
+
+[project.urls]
+Homepage = "https://github.com/HutoriHunzu/pycaddy"
+Repository = "https://github.com/HutoriHunzu/pycaddy"

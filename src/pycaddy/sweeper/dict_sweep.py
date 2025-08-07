@@ -7,6 +7,12 @@ from .base import SweepAbstract
 
 
 class DictSweep(BaseModel, SweepAbstract[dict]):
+    """
+    Parameter sweeper for generating combinations of experiment parameters.
+    
+    Takes a dictionary of parameters with lists of values and generates
+    all combinations using different strategies (product, zip).
+    """
     parameters: dict = {}
     constants: dict = {}
     strategy: StrategyName = StrategyName.PRODUCT

@@ -71,7 +71,7 @@ class PeriodicScheduler:
         min_period = min(t.period_seconds for t in self._tasks)
 
         while True:
-            # pick only those whose timer ≥ their period
+            # pick only those whose timer >= their period
             due = [t for t in self._tasks if t.is_due()]
             if not due:
                 break
@@ -96,5 +96,5 @@ class PeriodicScheduler:
             if duration > min_period:
                 raise ValueError(
                     f"Task took {duration:.3f}s but the shortest "
-                    f"period is {min_period:.3f}s — it will re-trigger itself!"
+                    f"period is {min_period:.3f}s - it will re-trigger itself!"
                 )

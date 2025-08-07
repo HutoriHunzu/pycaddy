@@ -1,5 +1,5 @@
 """
-ledger.py — v2
+ledger.py - v2
 ==============
 
 Light-weight, JSON-backed *run ledger* for experiment tracking.
@@ -23,10 +23,7 @@ What to keep in mind
 
 from __future__ import annotations
 
-import json
 from contextlib import contextmanager, nullcontext
-from datetime import datetime
-from multiprocessing import Lock
 from pathlib import Path
 from typing import Generator, TypeAlias
 from filelock import FileLock
@@ -41,7 +38,7 @@ from .status import Status
 #  Globals
 # ---------------------------------------------------------------------
 
-# LEDGER_LOCK: Lock | None = None   # installed once in the pool initializer
+LEDGER_LOCK = None   # installed once in the pool initializer
 #
 #
 # def set_global_lock(lock: Lock | None) -> None:
@@ -55,8 +52,8 @@ from .status import Status
 # ---------------------------------------------------------------------
 
 UID_RECORD_DICT: TypeAlias = dict[str, RunRecord]          # uid   -> record
-RELPATH_DICT:     TypeAlias = dict[str, UID_RECORD_DICT]   # rel   -> …
-DATA_STRUCTURE:   TypeAlias = dict[str, RELPATH_DICT]      # ident -> …
+RELPATH_DICT:     TypeAlias = dict[str, UID_RECORD_DICT]   # rel   -> records
+DATA_STRUCTURE:   TypeAlias = dict[str, RELPATH_DICT]      # ident -> paths
 
 DATA_ADAPTER = TypeAdapter(DATA_STRUCTURE)
 
@@ -83,6 +80,13 @@ class Ledger(metaclass=PerPathSingleton):
     #  Life-cycle
     # -----------------------------------------------------------------
     def __init__(self, path: str | Path, maxsize: int = 1000) -> None:
+        """
+        Initialize a Ledger for experiment tracking.
+        
+        Args:
+            path: Path to the metadata.json file
+            maxsize: Maximum number of runs per identifier/relpath combination
+        """
         self.file: Path = Path(path).expanduser().resolve()
         self.file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -110,7 +114,7 @@ class Ledger(metaclass=PerPathSingleton):
 
         Returns
         -------
-        uid : str      zero-padded counter ("000", "001", …)
+        uid : str      zero-padded counter ("000", "001", etc)
         """
         rkey = _relkey(relpath)
 

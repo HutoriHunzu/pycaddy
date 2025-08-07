@@ -4,15 +4,14 @@ project.py
 A *pydantic-aware* facade that lets you organise output folders and
 log runs through a shared :class:`~workflow.ledger.Ledger`.
 
-* ``root``     – absolute directory that owns ``metadata.json``
-* ``relpath``  – sub-folder this instance points to (``Path("")`` at root)
-* ``ledger``   – lazily-loaded, shared across every clone produced by
+* ``root``     - absolute directory that owns ``metadata.json``
+* ``relpath``  - sub-folder this instance points to (``Path("")`` at root)
+* ``ledger``   - lazily-loaded, shared across every clone produced by
                  :py:meth:`Project.group`
 """
 
 from __future__ import annotations
 
-import dataclasses
 
 from pydantic import BaseModel, Field, PrivateAttr
 from pathlib import Path
@@ -20,15 +19,15 @@ from pathlib import Path
 # from .run_location import RunLocation
 from .session import Session
 
-from ..ledger import Ledger, Status, RunRecord
+from ..ledger import Ledger
 from ..dict_utils import hash_dict
 
 from .structs import StorageMode, ExistingRun
 
-from ..utils import PathLike, AbsolutePathLike
+from ..utils import PathLike
 
 
-# ─────────────────────────────── class ────────────────────────────── #
+# Project class
 
 class Project(BaseModel):
     # serializable fields -------------------------------------------------
@@ -76,7 +75,19 @@ class Project(BaseModel):
                 params: dict | None = None,
                 existing_run_strategy: ExistingRun = None,
                 storage_mode: StorageMode = None
-                ) -> Session:  # may return None when SKIP
+                ) -> Session:
+        """
+        Create or resume a Session for running experiments.
+        
+        Args:
+            identifier: Unique name for this experiment type
+            params: Dictionary of parameters for this run
+            existing_run_strategy: Whether to resume existing runs or create new ones
+            storage_mode: How to organize output files (subfolder or prefix)
+            
+        Returns:
+            Session object for managing the experiment run
+        """
 
         # if resume try to find the current run record
         existing_run_strategy = existing_run_strategy or self.existing_run_strategy

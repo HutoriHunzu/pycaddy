@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Type, TypeVar
+from typing import TypeVar
 
 T = TypeVar('T')
 

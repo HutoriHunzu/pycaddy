@@ -6,8 +6,6 @@ import multiprocessing as mp
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import pytest
-import time
 from pycaddy.ledger import Ledger, Status
 
 
@@ -38,7 +36,6 @@ def test_concurrent_allocate_log_cross_platform():
     """
     with TemporaryDirectory() as tmpdir:
         meta_file = Path(tmpdir) / "meta.json"
-        lock = mp.Lock()
 
         # Use a process pool so the initializer runs once per worker
         with mp.Pool(

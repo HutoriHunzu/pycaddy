@@ -118,10 +118,10 @@ def parse_quantity(s: str, unit: str | None = None) -> tuple[float, str]:
 # Demo
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    # print(convert(750_000, "ns"))  # → (0.75, 'millisecond')
-    # print(convert([750_000, 1e6, 1.2e6], "ns"))  # → ([0.75, 1.0, 1.2], 'millisecond')
+    # print(convert(750_000, "ns"))  # -> (0.75, 'millisecond')
+    # print(convert([750_000, 1e6, 1.2e6], "ns"))  # -> ([0.75, 1.0, 1.2], 'millisecond')
     # arr = np.array([3.0, 4.0, 5.0])
-    # print(convert(arr, "m", "cm"))  # → (array([300., 400., 500.]), 'centimeter')
+    # print(convert(arr, "m", "cm"))  # -> (array([300., 400., 500.]), 'centimeter')
 
     arg = 130_000_000
     print(convert(arg, origin_unit='ns'))

@@ -7,6 +7,13 @@ from .structs import StorageMode
 
 @dataclass
 class Session:
+    """
+    Represents an individual experiment run with unique ID and path.
+    
+    Provides methods to manage run status and attach files to runs.
+    Sessions are created by Project.session() and manage their own
+    folder structure and file organization.
+    """
     identifier: str
     uid: str
     relpath: Path

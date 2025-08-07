@@ -19,7 +19,7 @@ def zip_strategy(values: Iterable[Iterable]) -> Iterable[Iterable]:
     return zip(*values)
 
 
-# CONSTANT mapping of name → callable
+# CONSTANT mapping of name - callable
 STRATEGIES: Mapping[StrategyName, StrategyFunc] = {
     StrategyName.PRODUCT: product_strategy,
     StrategyName.ZIP: zip_strategy,
