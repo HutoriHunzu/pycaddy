@@ -5,14 +5,13 @@ description = "A Python toolbox caddy for experiment tracking, parameter sweepin
 authors = [
     {name = "Uri Goldblatt", email = "uri.goldblatt@gmail.com"}
 ]
-license = {text = "MIT"}
+license = "MIT"
 readme = "README.md"
 keywords = ["experiment-tracking", "automation", "parameter-sweep", "toolbox"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -36,3 +35,7 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/HutoriHunzu/pycaddy"
 Repository = "https://github.com/HutoriHunzu/pycaddy"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
