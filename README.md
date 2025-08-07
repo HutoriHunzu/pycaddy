@@ -64,5 +64,5 @@ MIT License - see [LICENSE](LICENSE) file.
 
 ## Links
 
-- **Repository**: https://github.com/HutoriHunzu/pykit
+- **Repository**: https://github.com/HutoriHunzu/pycaddy
 - **Author**: Uri Goldblatt (uri.goldblatt@gmail.com)
