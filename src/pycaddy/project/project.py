@@ -12,7 +12,6 @@ log runs through a shared :class:`~workflow.ledger.Ledger`.
 
 from __future__ import annotations
 
-
 from pydantic import BaseModel, Field, PrivateAttr
 from pathlib import Path
 
@@ -144,3 +143,25 @@ class Project(BaseModel):
 
         child.ensure_folder()
         return child
+
+    def find_sessions(self, identifier: str) -> list[Session]:
+
+        uid_record_dict = self.ledger.get_uid_record_dict(
+            identifier=identifier,
+            relpath=self.relpath)
+
+        sessions = []
+        for uid, record in uid_record_dict.items():
+            sessions.append(Session(
+                ledger=self.ledger,
+                identifier=identifier,
+                uid=uid,
+                relpath=self.relpath,
+                absolute_path=self.absolute_path,
+                param_hash=record.param_hash,
+                storage_mode=self.storage_mode,
+            ))
+
+        return sessions
+
+

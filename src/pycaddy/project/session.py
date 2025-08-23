@@ -60,7 +60,7 @@ class Session:
              name: str = None,
              suffix: str = '',
              include_identifier: bool = True,
-             include_uid: bool = True):
+             include_uid: bool = True) -> Path:
 
         file_name_list = []
         if self.storage_mode == StorageMode.PREFIX and include_uid:
